@@ -1,4 +1,5 @@
 package com.seattleacademy.team20;
+
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -32,8 +33,9 @@ public class Skillcontroller {
 
 	private static final Logger logger = LoggerFactory.getLogger(Skillcontroller.class);
 	@Autowired
-    private JdbcTemplate jdbcTemplate;
-//	MySQLとの接続するため
+	private JdbcTemplate jdbcTemplate;
+
+	//	MySQLとの接続するため
 	/**
 	 * Simply selects the home view to render by returning its name.
 	 * @throws IOException
@@ -50,92 +52,87 @@ public class Skillcontroller {
 
 	//Listの宣言
 
-	public List<Skill> selectSkills(){
-	 final String sql = "select * from skills";
-	 return jdbcTemplate.query(sql,new RowMapper<Skill>() {
-	 public Skill mapRow(ResultSet rs ,int rowNum) throws SQLException{
-	 return new Skill(rs.getString("category"),
-	 rs.getString("name"),rs.getInt("score"));
-         }
-	  });
-	 }
+	public List<Skill> selectSkills() {
+		final String sql = "select * from skills";
+		return jdbcTemplate.query(sql, new RowMapper<Skill>() {
+			public Skill mapRow(ResultSet rs, int rowNum) throws SQLException {
+				return new Skill(rs.getString("category"),
+						rs.getString("name"), rs.getInt("score"));
+			}
+		});
+	}
 
-
-//管理者権限？？
+	//管理者権限？？
 	private FirebaseApp app;
-//Fetch the service account key JSON file contents
-//	SDKの初期化
-	public void initialize() throws IOException{
-	   	FileInputStream refreshToken = new FileInputStream("/Users/eisuke-gonza/Downloads/deploy-portfolio-2089b-firebase-adminsdk-z4smk-e196969c86.json");
-	   	FirebaseOptions options = new FirebaseOptions.Builder()
-			 .setCredentials(GoogleCredentials.fromStream(refreshToken))
-			 .setDatabaseUrl("https://deploy-portfolio-2089b.firebaseio.com/")
-			 .build();
-		app = FirebaseApp.initializeApp(options,"other");
+
+	//Fetch the service account key JSON file contents
+	//	SDKの初期化
+	public void initialize() throws IOException {
+		FileInputStream refreshToken = new FileInputStream(
+				"/Users/eisuke-gonza/Downloads/deploy-portfolio-2089b-firebase-adminsdk-z4smk-e196969c86.json");
+		FirebaseOptions options = new FirebaseOptions.Builder()
+				.setCredentials(GoogleCredentials.fromStream(refreshToken))
+				.setDatabaseUrl("https://deploy-portfolio-2089b.firebaseio.com/")
+				.build();
+		app = FirebaseApp.initializeApp(options, "other");
 	}
 
 	public void uploadSkill(List<Skill> skills) {
 		final FirebaseDatabase database = FirebaseDatabase.getInstance(app);
 		DatabaseReference ref = database.getReference("skillCategories");
-//		データの取得（MySQLから）
-//		データを取得してから形成する
-//		databaseにアップロードする
-        // JSPに渡すデータを設定する
-	    List<Map<String,Object>> dataList = new ArrayList<Map<String,Object>>();
-		Map<String,Object> map;
-		Map<String,List<Skill>>skillMap = skills.stream().collect(Collectors.groupingBy(Skill::getCategory));
-		for(Map.Entry<String, List<Skill>> entry : skillMap.entrySet()) {
-//		    System.out.println(entry.getKey());
-//		    System.out.println(entry.getValue());
+		//		データの取得（MySQLから）
+		//		データを取得してから形成する
+		//		databaseにアップロードする
+		// JSPに渡すデータを設定する
+		List<Map<String, Object>> dataList = new ArrayList<Map<String, Object>>();
+		Map<String, Object> map;
+		Map<String, List<Skill>> skillMap = skills.stream().collect(Collectors.groupingBy(Skill::getCategory));
+		for (Map.Entry<String, List<Skill>> entry : skillMap.entrySet()) {
+			//		    System.out.println(entry.getKey());
+			//		    System.out.println(entry.getValue());
 			map = new HashMap<>();
 			map.put("category", entry.getKey());
 			map.put("skills", entry.getValue());
 
 			dataList.add(map);
 		}
-//      リアルタイムデータベース更新
+		//      リアルタイムデータベース更新
 		ref.setValue(dataList, new DatabaseReference.CompletionListener() {
-			 @Override
-			 public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
-			 if(databaseError != null) {
-			 System.out.println("Data could be saved" + databaseError.getMessage());
-			} else {
-			 System.out.println("Data save successfully.");
+			@Override
+			public void onComplete(DatabaseError databaseError, DatabaseReference databaseReference) {
+				if (databaseError != null) {
+					System.out.println("Data could be saved" + databaseError.getMessage());
+				} else {
+					System.out.println("Data save successfully.");
+				}
 			}
-			}
-			});
-	 }
-//                 ↓メインクラス名
-   	 public class Skill {
-	    private String category;
+		});
+	}
+
+	//                 ↓メインクラス名
+	public class Skill {
+		private String category;
 		private String name;
-	    private int score;
-	 public Skill(String category,String name, int score) {
-		  this.category = category;
-		  this.name = name;
-		  this.score = score;
-	  }
-	    public String getCategory() {
+		private int score;
+
+		public Skill(String category, String name, int score) {
+			this.category = category;
+			this.name = name;
+			this.score = score;
+		}
+
+		public String getCategory() {
 			return category;
 		}
+
 		public String getName() {
 			return name;
 		}
+
 		public int getScore() {
 			return score;
 		}
-//	    Map<String, List<Skill>> grpByType = Skill.stream().collect(
-//                Collectors.groupingBy(Skill::getSkillCategory));
-     	}
+		//	    Map<String, List<Skill>> grpByType = Skill.stream().collect(
+		//                Collectors.groupingBy(Skill::getSkillCategory));
+	}
 }
-
-	//As an admin, the app has access to read and write all data, regardless of Security Rules
-//	DatabaseReference ref = FirebaseDatabase.getInstance()
-//	 .getReference("restricted_access/secret_document");
-//	ref.addListenerForSingleValueEvent(new ValueEventListener() {
-//	@Override
-//	public void onDataChange(DataSnapshot dataSnapshot) {
-//	 Object document = dataSnapshot.getValue();
-//	 System.out.println(document);
-//	}
-
